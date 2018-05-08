@@ -15,9 +15,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-We will be using a dataset of Youtube video statistics to predict the amount of views on a given trending video. 
+We will be using a dataset of Youtube trending video statistics to predict the amount of views on a given trending video. 
 
-
+## Data Retrieval / Cleaning 
 ```{r}
 dat = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/USvideos.csv")
 dat$thumbnail_link = NULL
@@ -28,4 +28,17 @@ days_trending = data.frame(table(dat$video_id))
 colnames(days_trending) = c("video_id", "days_trending")
 dat = merge(dat, days_trending)
 ```
+## Data Exploration
+
+
+
+
+## Splitting
+
+
+
+
+## Model 1
+
+
 
