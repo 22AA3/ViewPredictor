@@ -18,14 +18,39 @@ knitr::opts_chunk$set(echo = TRUE)
 We will be using a dataset of Youtube video statistics to predict the amount of views on a given trending video. 
 
 
+
 ```{r}
 dat = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/USvideos.csv")
 dat$thumbnail_link = NULL
 dat$video_error_or_removed = NULL  
-summary(dat)
 #create table of how many times a video_id appears
 days_trending = data.frame(table(dat$video_id))
 colnames(days_trending) = c("video_id", "days_trending")
 dat = merge(dat, days_trending)
+```
+
+```{r}
+source("lin-regr-util.R")
+splits = split_data(dat)
+tr_dat = splits[[1]]
+te_dat = splits[[2]]
+
+fit = glm(views ~ days_trending + comment_count + likes + dislikes, dat=tr_dat)
+summary(fit)
+actuals = te_dat$views
+predicts = predict(fit, newdat=te_dat)
+rmse = function(error){
+  sqrt(mean(error^2))
+}
+pred_vs_actual = function(predicted, actual){
+  rng = range(c(predicted, actual))
+  plot(actuals~predicts, pch=20,
+  xlim=rng, ylim=rng, 
+  main="predicted vs. actual values")
+  lines(c(rng[1], rng[2]),
+  c(rng[1], rng[2]),
+  lty=2, col="blue", lwd=1.5)
+}
+pred_rmse = rmse(abs(actuals - predicts))
 ```
 
