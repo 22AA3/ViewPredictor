@@ -9,6 +9,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+
+```
+
 ## Introduction
 
 We will be using a dataset of Youtube video statistics to predict the amount of views on a given trending video. 
@@ -19,5 +23,9 @@ dat = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/USvideos.c
 dat$thumbnail_link = NULL
 dat$video_error_or_removed = NULL  
 summary(dat)
+#create table of how many times a video_id appears
+days_trending = data.frame(table(dat$video_id))
+colnames(days_trending) = c("video_id", "days_trending")
+dat = merge(dat, days_trending)
 ```
 
