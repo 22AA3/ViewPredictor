@@ -28,39 +28,62 @@ dat$thumbnail_link = NULL
 dat$video_error_or_removed = NULL 
 #create table of how many times a video_id appears
 days_trending = data.frame(table(dat$video_id))
+max_likes = aggregate(likes ~ video_id, data=dat, max)
+max_dislikes = aggregate(dislikes ~ video_id, data=dat, max)
+max_comments = aggregate(comment_count ~ video_id, data=dat, max)
+max_views = aggregate(views ~ video_id, data=dat, max)
 colnames(days_trending) = c("video_id", "days_trending")
+colnames(max_likes) = c("video_id", "max_likes")
+colnames(max_dislikes) = c("video_id", "max_dislikes")
+colnames(max_comments) = c("video_id", "max_comments")
+colnames(max_views) = c("video_id", "max_views")
 dat = merge(dat, days_trending)
+dat = merge(dat, max_likes)
+dat = merge(dat, max_dislikes)
+dat = merge(dat, max_comments)
+dat = merge(dat, max_views)
+dat$views = NULL
+dat$likes = NULL
+dat$dislikes = NULL
+dat$comment_count = NULL
+dat = dat[!duplicated(dat$video_id),]
+dat$description = gsub('\\\\n',' ', dat$description)
 ```
 ## Data Exploration
 
 
 ```{r}
-plot(density(dat[dat$views < 1000000,]$views),xlab = "views",main = "Density of Views under 1 Million",xaxt = "n")
+plot(density(dat[dat$max_views < 1000000,]$max_views),xlab = "views",main = "Density of Views under 1 Million",xaxt = "n")
 axis(1,at = seq(0,1000000,200000), labels= c("0","200,000","400,000","600,000","800,000","1,000,000"))
 ```
-The denstiy of views plot shows that a large portion of the view counts are below 400,000 views. 
+The denstiy of views plot shows that a large portion of the view counts are below 400,000 views.
+
+```{r}
+par(mar=c(5, 17, 3, 3))
+barplot(tail(sort(table(dat$channel_title))), las = 1, horiz=T, main="Channels with most trending videos", xlab="Number of trending videos", col="red")
+```
+Understanding the channels with the most trending videos might help us predict views better.
 
 ## Splitting
-
-
-
-
-## Model 1
-
-
 
 ```{r}
 source("lin-regr-util.R")
 splits = split_data(dat)
 tr_dat = splits[[1]]
 te_dat = splits[[2]]
+```
 
-fit = glm(views ~ days_trending + comment_count + likes + dislikes, dat=tr_dat)
+
+## Model 1
+
+```{r}
+
+fit = glm(max_views ~ days_trending + max_comments + max_likes + max_dislikes, dat=tr_dat)
 summary(fit)
-actuals = te_dat$views
+actuals = te_dat$max_views
 predicts = predict(fit, newdat=te_dat)
-rmse = function(error){
-  sqrt(mean(error^2))
+rmse = function(actuals, predicts){
+  sqrt(mean((actuals-predicts)^2))
 }
 pred_vs_actual = function(predicted, actual){
   rng = range(c(predicted, actual))
@@ -71,6 +94,7 @@ pred_vs_actual = function(predicted, actual){
   c(rng[1], rng[2]),
   lty=2, col="blue", lwd=1.5)
 }
-pred_rmse = rmse(abs(actuals - predicts))
+pred_rmse = rmse(actuals, predicts)
+pred_rmse
 ```
 
