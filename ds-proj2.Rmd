@@ -19,15 +19,35 @@ We will be using a dataset of Youtube video statistics to predict the amount of 
 
 
 
+We will be using a dataset of Youtube trending video statistics to predict the amount of views on a given trending video. 
+
+## Data Retrieval / Cleaning 
 ```{r}
 dat = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/USvideos.csv")
 dat$thumbnail_link = NULL
-dat$video_error_or_removed = NULL  
+dat$video_error_or_removed = NULL 
 #create table of how many times a video_id appears
 days_trending = data.frame(table(dat$video_id))
 colnames(days_trending) = c("video_id", "days_trending")
 dat = merge(dat, days_trending)
 ```
+## Data Exploration
+
+
+```{r}
+plot(density(dat[dat$views < 1000000,]$views),xlab = "views",main = "Density of Views under 1 Million",xaxt = "n")
+axis(1,at = seq(0,1000000,200000), labels= c("0","200,000","400,000","600,000","800,000","1,000,000"))
+```
+The denstiy of views plot shows that a large portion of the view counts are below 400,000 views. 
+
+## Splitting
+
+
+
+
+## Model 1
+
+
 
 ```{r}
 source("lin-regr-util.R")
