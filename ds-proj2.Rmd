@@ -17,10 +17,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 We will be using a dataset of Youtube video statistics to predict the amount of views on a given trending video. 
 
-
-
-We will be using a dataset of Youtube trending video statistics to predict the amount of views on a given trending video. 
-
 ## Data Retrieval / Cleaning 
 ```{r}
 dat = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/USvideos.csv")
@@ -48,6 +44,9 @@ dat$dislikes = NULL
 dat$comment_count = NULL
 dat = dat[!duplicated(dat$video_id),]
 dat$description = gsub('\\\\n',' ', dat$description)
+dat$max_likes = dat$max_likes + 1
+dat$max_comments = dat$max_likes + 1
+dat$max_dislikes = dat$max_dislikes + 1
 ```
 ## Data Exploration
 
@@ -78,7 +77,7 @@ te_dat = splits[[2]]
 
 ```{r}
 
-fit = glm(max_views ~ days_trending + max_comments + max_likes + max_dislikes, dat=tr_dat)
+fit = lm(log(max_views) ~ days_trending + log(max_comments) + log(max_likes) + log(max_dislikes), dat=tr_dat)
 summary(fit)
 actuals = te_dat$max_views
 predicts = predict(fit, newdat=te_dat)
@@ -87,14 +86,15 @@ rmse = function(actuals, predicts){
 }
 pred_vs_actual = function(predicted, actual){
   rng = range(c(predicted, actual))
-  plot(actuals~predicts, pch=20,
+  plot(actuals~exp(predicts), pch=20,
   xlim=rng, ylim=rng, 
   main="predicted vs. actual values")
   lines(c(rng[1], rng[2]),
   c(rng[1], rng[2]),
   lty=2, col="blue", lwd=1.5)
 }
-pred_rmse = rmse(actuals, predicts)
+pred_vs_actual(predicts, actuals)
+pred_rmse = rmse(actuals, exp(predicts))
 pred_rmse
 ```
 
