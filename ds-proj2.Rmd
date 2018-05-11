@@ -20,6 +20,11 @@ We will be using a dataset of Youtube video statistics to predict the amount of 
 ## Data Retrieval / Cleaning 
 ```{r}
 dat = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/USvideos.csv")
+dat1 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/CAvideos.csv")
+dat2 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/FRvideos.csv")
+dat3 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/DEvideos.csv")
+dat4 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/GBvideos.csv")
+dat = rbind(dat, dat1, dat2, dat3, dat4)
 dat$thumbnail_link = NULL
 dat$video_error_or_removed = NULL 
 #create table of how many times a video_id appears
