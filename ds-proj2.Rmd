@@ -15,20 +15,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-We will be using a dataset of Youtube video statistics to predict the amount of views on a given trending video. 
+We will be using a dataset of Youtube video statistics to predict the amount of views on a given trending video.
 
 ## Data Retrieval / Cleaning 
+
+We retrieved our data from 4 seperate datasets and combined them into one. This was so we could get a larger data set over all. The reason the dataset seperate was because the video were on youtube trending in different regions. To handle this we added a variable that would state which region each youtube video was from. Next we combine many rows together. This was because there were videos that were on the trending page for more than one day so we counted up the number of days tending and added it as a new attribute. Also while combining rows we took the max like, dislikes, comments, and views varible from each video and added them as new attributes as well. Finally we added a constant (1) to the variables max_like, max_dislike, max_comments, and max_views to allow for log tranformation/scaling. 
 ```{r}
 dat = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/USvideos.csv")
 dat1 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/CAvideos.csv")
 dat2 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/FRvideos.csv")
 dat3 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/DEvideos.csv")
-dat4 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/GBvideos.csv")
 dat$region=0
 dat1$region=1
 dat2$region=2
 dat3$region=3
-dat4$region=4
 dat = rbind(dat, dat1, dat2, dat3)
 dat$thumbnail_link = NULL
 dat$video_error_or_removed = NULL 
@@ -57,8 +57,10 @@ dat$description = gsub('\\\\n',' ', dat$description)
 dat$max_likes = dat$max_likes + 1
 dat$max_comments = dat$max_comments + 1
 dat$max_dislikes = dat$max_dislikes + 1
+dat$max_views = dat$max_views + 1
 dat$region = as.factor(dat$region)
 dat$days_trending = as.factor(dat$days_trending)
+
 ```
 ## Data Exploration
 
@@ -77,19 +79,21 @@ barplot(tail(sort(table(dat$channel_title))), las = 1, horiz=T, main="Channels w
 ## Splitting
 Here we split the data
 ```{r}
+set.seed(123)
 source("lin-regr-util.R")
 splits = split_data(dat)
 tr_dat = splits[[1]]
 te_dat = splits[[2]]
+
 ```
 
 
 ## Model 1
-
+For our first  model we decided to use days trending, region, max comments, max likes, and max dislikes as our predictors. We chose to log the variables max comments, max likes and max dislikes to better follow a linear model. While our RMSE is about 1,000,000 which is the best we were able to achieve. 
 ```{r}
 
-fit = lm(log(max_views) ~ days_trending + log(max_comments) + log(max_likes) + log(max_dislikes), dat=tr_dat)
-summary(fit)
+fit = lm(log(max_views) ~ log(max_comments) + log(max_likes) + log(max_dislikes) + region + days_trending , dat=tr_dat)
+
 actuals = te_dat$max_views
 predicts = predict(fit, newdat=te_dat)
 rmse = function(actuals, predicts){
@@ -106,19 +110,19 @@ pred_vs_actual = function(predicted, actual){
 }
 pred_vs_actual(predicts, actuals)
 pred_rmse = rmse(actuals, exp(predicts))
-pred_rmse
+print(paste0("RMSE: ", round(pred_rmse)))
 ```
 
 #Model Analysis
-When looking at the models diagnostic plots the overall consensus is that the model follows patterns of a  model. However, there are a few interesting aspects in each graph. First, in the Residuals vs Fitted graph it can be seen that there is a slight parabola. This is a bit alarming as the pattern for a good linear relationship should be a be a horizontal line without a pattern. Second, in the Normal Q-Q graph it is shown that the residuals do a good job of following the line until the very end where it find its way well above the where it should be. This severe deviation is a sign of a bad model. Third, in the Scale-Location model 
-
+When looking at the models diagnostic plots the overall consensus is that the model follows patterns of a mediocre model. However, there are a few interesting aspects in each graph. First, in the Residuals vs Fitted graph it can be seen that there is a slight parabola. This is a bit alarming as the pattern for a good linear relationship should be a be a horizontal line without a pattern. Second, in the Normal Q-Q graph it is shown that the residuals do a good job of following the line until the very end where it find its way well above the where it should be. This severe deviation is a sign of a bad model. Third, the Scale-Location model shows that our model does not have an even distribution. Forth, We interpretted the Residuals vs Leverage the one of the few pieces of evidence that our model has some level of success. It show shtta there is only one point outside of the cooks distance and it barely effects the model. 
 ```{r}
+
 plot(fit)
 ```
 ##Model 2
+For our second  model we decided to use days trending, max comments, max likes, and max dislikes as our predictors.Not the absesnce of region. While our RMSE was around 1,000,000 again it was still nominally better than model 1 by about 10,000. 
 ```{r}
-fit2 = lm(log(max_views) ~ log(max_comments) + log(max_likes) + log(max_dislikes) + region + days_trending , dat=tr_dat)
-summary(fit2)
+fit2 = lm(log(max_views) ~ days_trending + log(max_comments) + log(max_likes) + log(max_dislikes), dat=tr_dat)
 actuals = te_dat$max_views
 predicts = predict(fit2, newdat=te_dat)
 rmse = function(actuals, predicts){
@@ -135,12 +139,20 @@ pred_vs_actual = function(predicted, actual){
 }
 pred_vs_actual(predicts, actuals)
 pred_rmse = rmse(actuals, exp(predicts))
-pred_rmse
+print(paste0("RMSE: ", round(pred_rmse)))
 ```
-
-
+The diagnostic output for our second model shares a lot of the same characteristics with the first model. Despite this there is evidence of the improvement of the model. In the last plot, Resuiduals vs Leverage the point 31184 that was prevoioud on the outer cooks distance is now closer in.   
 ```{r}
 plot(fit2)
 ```
+
+
+
+
+
+##Conclusion
+
+In conclusion, when looking at the models we find that it was very difficult to create a model that would predict view count based on the model we have. Although our lowest rmse value shown in this report was about 1 million it was a great improvement compared to the rmse values found while testing out our model. This was partly due to our need for scaling, factorization and choosing the correct predictors. With the techniques learned in class we were able to improve this model from 3 million rmse down to 1 million. While this is not where we want it to be, we are satisfied with this result. Some barriers that blocked our path were due to our limited dataset size, about 66,000. In the beginning, we believed this to be enough, but it seems that for this idea it leaves much to be needed in the case of predicting. 
+
 
 
