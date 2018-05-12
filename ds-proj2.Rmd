@@ -24,7 +24,12 @@ dat1 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/CAvideos.
 dat2 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/FRvideos.csv")
 dat3 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/DEvideos.csv")
 dat4 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/GBvideos.csv")
-dat = rbind(dat, dat1, dat2, dat3, dat4)
+dat$region=0
+dat1$region=1
+dat2$region=2
+dat3$region=3
+dat4$region=4
+dat = rbind(dat, dat1, dat2, dat3)
 dat$thumbnail_link = NULL
 dat$video_error_or_removed = NULL 
 #create table of how many times a video_id appears
@@ -50,26 +55,27 @@ dat$comment_count = NULL
 dat = dat[!duplicated(dat$video_id),]
 dat$description = gsub('\\\\n',' ', dat$description)
 dat$max_likes = dat$max_likes + 1
-dat$max_comments = dat$max_likes + 1
+dat$max_comments = dat$max_comments + 1
 dat$max_dislikes = dat$max_dislikes + 1
+dat$region = as.factor(dat$region)
+dat$days_trending = as.factor(dat$days_trending)
 ```
 ## Data Exploration
 
-
+#Density Plot
+The denstiy of views plot shows that a large portion of the view counts are below 200,000 views.
 ```{r}
 plot(density(dat[dat$max_views < 1000000,]$max_views),xlab = "views",main = "Density of Views under 1 Million",xaxt = "n")
 axis(1,at = seq(0,1000000,200000), labels= c("0","200,000","400,000","600,000","800,000","1,000,000"))
 ```
-The denstiy of views plot shows that a large portion of the view counts are below 400,000 views.
-
+#Trending Videos
+Understanding the channels with the most trending videos might help us predict views better.
 ```{r}
 par(mar=c(5, 17, 3, 3))
 barplot(tail(sort(table(dat$channel_title))), las = 1, horiz=T, main="Channels with most trending videos", xlab="Number of trending videos", col="red")
 ```
-Understanding the channels with the most trending videos might help us predict views better.
-
 ## Splitting
-
+Here we split the data
 ```{r}
 source("lin-regr-util.R")
 splits = split_data(dat)
@@ -102,4 +108,39 @@ pred_vs_actual(predicts, actuals)
 pred_rmse = rmse(actuals, exp(predicts))
 pred_rmse
 ```
+
+#Model Analysis
+When looking at the models diagnostic plots the overall consensus is that the model follows patterns of a  model. However, there are a few interesting aspects in each graph. First, in the Residuals vs Fitted graph it can be seen that there is a slight parabola. This is a bit alarming as the pattern for a good linear relationship should be a be a horizontal line without a pattern. Second, in the Normal Q-Q graph it is shown that the residuals do a good job of following the line until the very end where it find its way well above the where it should be. This severe deviation is a sign of a bad model. Third, in the Scale-Location model 
+
+```{r}
+plot(fit)
+```
+##Model 2
+```{r}
+fit2 = lm(log(max_views) ~ log(max_comments) + log(max_likes) + log(max_dislikes) + region + days_trending , dat=tr_dat)
+summary(fit2)
+actuals = te_dat$max_views
+predicts = predict(fit2, newdat=te_dat)
+rmse = function(actuals, predicts){
+  sqrt(mean((actuals-predicts)^2))
+}
+pred_vs_actual = function(predicted, actual){
+  rng = range(c(predicted, actual))
+  plot(actuals~exp(predicts), pch=20,
+  xlim=rng, ylim=rng, 
+  main="predicted vs. actual values")
+  lines(c(rng[1], rng[2]),
+  c(rng[1], rng[2]),
+  lty=2, col="blue", lwd=1.5)
+}
+pred_vs_actual(predicts, actuals)
+pred_rmse = rmse(actuals, exp(predicts))
+pred_rmse
+```
+
+
+```{r}
+plot(fit2)
+```
+
 
