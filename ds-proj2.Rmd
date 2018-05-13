@@ -82,7 +82,7 @@ te_dat = splits[[2]]
 
 ```{r}
 
-fit = lm(log(max_views) ~ days_trending + log(max_comments) + log(max_likes) + log(max_dislikes), dat=tr_dat)
+fit = lm(log(max_views) ~ days_trending + log(max_comments) + log(max_likes), dat=tr_dat)
 summary(fit)
 actuals = te_dat$max_views
 predicts = predict(fit, newdat=te_dat)
