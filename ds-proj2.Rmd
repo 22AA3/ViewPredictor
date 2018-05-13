@@ -9,22 +9,23 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
-
-```
-
 ## Introduction
 
-We will be using a dataset of Youtube video statistics to predict the amount of views on a given trending video. 
+We will be using a dataset of Youtube video statistics to predict the amount of views on a given trending video.
 
 ## Data Retrieval / Cleaning 
+
+We retrieved our data from 4 seperate datasets and combined them into one. This was so we could get a larger data set over all. The reason the dataset seperate was because the video were on youtube trending in different regions. To handle this we added a variable that would state which region each youtube video was from. Next we combine many rows together. This was because there were videos that were on the trending page for more than one day so we counted up the number of days tending and added it as a new attribute. Also while combining rows we took the max like, dislikes, comments, and views varible from each video and added them as new attributes as well. Finally we added a constant (1) to the variables max_like, max_dislike, max_comments, and max_views to allow for log tranformation/scaling. 
 ```{r}
 dat = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/USvideos.csv")
 dat1 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/CAvideos.csv")
 dat2 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/FRvideos.csv")
 dat3 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/DEvideos.csv")
-dat4 = read.csv("https://github.com/cforsythe/ViewPredictor/raw/master/GBvideos.csv")
-dat = rbind(dat, dat1, dat2, dat3, dat4)
+dat$region=0
+dat1$region=1
+dat2$region=2
+dat3$region=3
+dat = rbind(dat, dat1, dat2, dat3)
 dat$thumbnail_link = NULL
 dat$video_error_or_removed = NULL 
 #create table of how many times a video_id appears
@@ -50,42 +51,61 @@ dat$comment_count = NULL
 dat = dat[!duplicated(dat$video_id),]
 dat$description = gsub('\\\\n',' ', dat$description)
 dat$max_likes = dat$max_likes + 1
-dat$max_comments = dat$max_likes + 1
+dat$max_comments = dat$max_comments + 1
 dat$max_dislikes = dat$max_dislikes + 1
+dat$max_views = dat$max_views + 1
+dat$region = as.factor(dat$region)
+dat$days_trending = as.factor(dat$days_trending)
 ```
 ## Data Exploration
 
+#Density Plot
+
+The denstiy of views plot shows that a large portion of the view counts are below 200,000 views.
 
 ```{r}
 plot(density(dat[dat$max_views < 1000000,]$max_views),xlab = "views",main = "Density of Views under 1 Million",xaxt = "n")
 axis(1,at = seq(0,1000000,200000), labels= c("0","200,000","400,000","600,000","800,000","1,000,000"))
 ```
-The denstiy of views plot shows that a large portion of the view counts are below 400,000 views.
+#Trending Videos
+
+Understanding the channels with the most trending videos might help us predict views better.
 
 ```{r}
 par(mar=c(5, 17, 3, 3))
 barplot(tail(sort(table(dat$channel_title))), las = 1, horiz=T, main="Channels with most trending videos", xlab="Number of trending videos", col="red")
 ```
-Understanding the channels with the most trending videos might help us predict views better.
 
-## Splitting
+#Categories
+
+We thought it would be interesting to take a look at avg views per category to see if there were any significant differences. A problem we ran into is that the te_dat split had more levels than the test set and the model couldn't predict for the extra levels.
 
 ```{r}
+par(mar=c(5, 5, 1, 3))
+avg_views_by_cat = data.frame(aggregate(max_views ~ category_id, data=dat, mean))
+plot_data = t(avg_views_by_cat[-1])
+colnames(plot_data) = avg_views_by_cat[,1]
+barplot(plot_data, horiz=T, las=1, xlab="Amount of views", ylab="Category", main="Avg views by category")
+```
+## Splitting
+
+Here we split the data
+
+```{r}
+set.seed(123)
 source("lin-regr-util.R")
 splits = split_data(dat)
 tr_dat = splits[[1]]
 te_dat = splits[[2]]
+
 ```
 
+##Initial Model
 
-## Model 1
+As a starting point we will use a model
 
 ```{r}
-
-fit = lm(log(max_views) ~ days_trending + log(max_comments) + log(max_likes), dat=tr_dat)
-summary(fit)
-actuals = te_dat$max_views
-predicts = predict(fit, newdat=te_dat)
+fit = lm(max_views ~ days_trending + max_comments + max_likes + max_dislikes, dat=tr_dat)
 rmse = function(actuals, predicts){
   sqrt(mean((actuals-predicts)^2))
 }
@@ -98,8 +118,60 @@ pred_vs_actual = function(predicted, actual){
   c(rng[1], rng[2]),
   lty=2, col="blue", lwd=1.5)
 }
+actuals = te_dat$max_views
+predicts = predict(fit, newdat=te_dat)
+pred_vs_actual(predicts, actuals)
+pred_rmse = rmse(actuals, predicts)
+print(paste0("RMSE: ", round(pred_rmse)))
+```
+
+```{r}
+plot(fit)
+```
+
+
+## Model 1
+For our first  model we decided to use days trending, region, max comments, max likes, and max dislikes as our predictors. We chose to log the variables max comments, max likes and max dislikes to better follow a linear model. While our RMSE is about 1,000,000 which is the best we were able to achieve. 
+
+```{r}
+
+fit1 = lm(log(max_views) ~ log(max_comments) + log(max_likes) + log(max_dislikes) + region + days_trending , dat=tr_dat)
+actuals = te_dat$max_views
+predicts = predict(fit1, newdat=te_dat)
 pred_vs_actual(predicts, actuals)
 pred_rmse = rmse(actuals, exp(predicts))
-pred_rmse
+print(paste0("RMSE: ", round(pred_rmse)))
 ```
+
+#Model Analysis
+When looking at the models diagnostic plots the overall consensus is that the model follows patterns of a mediocre model. However, there are a few interesting aspects in each graph. First, in the Residuals vs Fitted graph it can be seen that there is a slight parabola. This is a bit alarming as the pattern for a good linear relationship should be a be a horizontal line without a pattern. Second, in the Normal Q-Q graph it is shown that the residuals do a good job of following the line until the very end where it find its way well above the where it should be. This severe deviation is a sign of a bad model. Third, the Scale-Location model shows that our model does not have an even distribution. Forth, We interpretted the Residuals vs Leverage the one of the few pieces of evidence that our model has some level of success. It show shtta there is only one point outside of the cooks distance and it barely effects the model. 
+```{r}
+
+plot(fit1)
+```
+
+##Model 2
+For our second  model we decided to use days trending, max comments, max likes, and max dislikes as our predictors.Notice the absence of region. While our RMSE was around 1,000,000 again it was still nominally better than model 1 by about 10,000. 
+
+```{r}
+fit2 = lm(log(max_views) ~ days_trending + log(max_comments) + log(max_likes) + log(max_dislikes), dat=tr_dat)
+actuals = te_dat$max_views
+predicts = predict(fit2, newdat=te_dat)
+pred_vs_actual(predicts, actuals)
+pred_rmse = rmse(actuals, exp(predicts))
+print(paste0("RMSE: ", round(pred_rmse)))
+```
+
+The diagnostic output for our second model shares a lot of the same characteristics with the first model. Despite this there is evidence of the improvement of the model. In the last plot, Resuiduals vs Leverage the point 31184 that was prevoioud on the outer cooks distance is now closer in.   
+
+```{r}
+plot(fit2)
+```
+
+
+##Conclusion
+
+In conclusion, when looking at the models we find that it was very difficult to create a model that would predict view count based on the model we have. Although our lowest rmse value shown in this report was about 1 million it was a great improvement compared to the rmse values found while testing out our model. This was partly due to our need for scaling, factorization and choosing the correct predictors. With the techniques learned in class we were able to improve this model from 3 million rmse down to 1 million. While this is not where we want it to be, we are satisfied with this result. Some barriers that blocked our path were due to our limited dataset size, about 66,000. In the beginning, we believed this to be enough, but it seems that for this idea it leaves much to be needed in the case of predicting. The most important thing that's keeping our model from performing better is not having enough features. With some sort of sentiment analyses/categorization of text it might be easier for the model to see a relationship between views and other features
+
+
 
