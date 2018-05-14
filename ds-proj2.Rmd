@@ -124,6 +124,9 @@ pred_vs_actual(predicts, actuals)
 pred_rmse = rmse(actuals, predicts)
 print(paste0("RMSE: ", round(pred_rmse)))
 ```
+##Model Analysis
+
+Our diagnostics show that the model is doing terrible. In the resduals vs fitted we can see that there is a terrible prediction from teh beginning that then get better in small area. This could be because of the data having a large amount of content around 200,000 views. The second graph shows that there are many outliers in the beginning and the end. In the third graph, Scale-Location, we can see that the model has terrible distribution. Lastly, we find many of the points outside of cook's distance. This model has a terrible accuracy, but will help in being the base model. 
 
 ```{r}
 plot(fit)
@@ -131,6 +134,7 @@ plot(fit)
 
 
 ## Model 1
+
 For our first  model we decided to use days trending, region, max comments, max likes, and max dislikes as our predictors. We chose to log the variables max comments, max likes and max dislikes to better follow a linear model. While our RMSE is about 1,000,000 which is the best we were able to achieve. 
 
 ```{r}
@@ -144,13 +148,16 @@ print(paste0("RMSE: ", round(pred_rmse)))
 ```
 
 #Model Analysis
-When looking at the models diagnostic plots the overall consensus is that the model follows patterns of a mediocre model. However, there are a few interesting aspects in each graph. First, in the Residuals vs Fitted graph it can be seen that there is a slight parabola. This is a bit alarming as the pattern for a good linear relationship should be a be a horizontal line without a pattern. Second, in the Normal Q-Q graph it is shown that the residuals do a good job of following the line until the very end where it find its way well above the where it should be. This severe deviation is a sign of a bad model. Third, the Scale-Location model shows that our model does not have an even distribution. Forth, We interpretted the Residuals vs Leverage the one of the few pieces of evidence that our model has some level of success. It show shtta there is only one point outside of the cooks distance and it barely effects the model. 
+
+When looking at the models diagnostic plots the overall consensus is that the model follows patterns of a mediocre model. However, there are a few interesting aspects in each graph. First, in the Residuals vs Fitted graph it can be seen that there is a slight parabola. This is a bit alarming as the pattern for a good linear relationship should be a be a horizontal line without a pattern. Second, in the Normal Q-Q graph it is shown that the residuals do a good job of following the line until the very end where it find its way well above the where it should be. This severe deviation is a sign of a bad model. Third, the Scale-Location model shows that our model does not have an even distribution. Forth, We interpretted the Residuals vs Leverage the one of the few pieces of evidence that our model has some level of success. It shows that there is only one point outside of the cooks distance and it barely effects the model. The analysis of this model shows that this model should have a better accuracy than the initial model, but in reality it does worse. 
+
 ```{r}
 
 plot(fit1)
 ```
 
 ##Model 2
+
 For our second  model we decided to use days trending, max comments, max likes, and max dislikes as our predictors.Notice the absence of region. While our RMSE was around 1,000,000 again it was still nominally better than model 1 by about 10,000. 
 
 ```{r}
@@ -161,8 +168,9 @@ pred_vs_actual(predicts, actuals)
 pred_rmse = rmse(actuals, exp(predicts))
 print(paste0("RMSE: ", round(pred_rmse)))
 ```
+##Model Analysis
 
-The diagnostic output for our second model shares a lot of the same characteristics with the first model. Despite this there is evidence of the improvement of the model. In the last plot, Resuiduals vs Leverage the point 31184 that was prevoioud on the outer cooks distance is now closer in.   
+The diagnostic output for our second model shares a lot of the same characteristics with the first model. Despite this there is evidence of the improvement of the model. In the last plot, Resuiduals vs Leverage the point 31184 that was previously on the outer cooks distance is now closer in. We are unsure of why this model does even worse. In many parts of the analysis we find that this model does far better than our initial model and even our first real model, but when comparing the rmse values we find that there is a massive disadvantage to using logs in order to help with the rather large numbers we are dealing with. 
 
 ```{r}
 plot(fit2)
@@ -171,7 +179,7 @@ plot(fit2)
 
 ##Conclusion
 
-In conclusion, when looking at the models we find that it was very difficult to create a model that would predict view count based on the model we have. Although our lowest rmse value shown in this report was about 1 million it was a great improvement compared to the rmse values found while testing out our model. This was partly due to our need for scaling, factorization and choosing the correct predictors. With the techniques learned in class we were able to improve this model from 3 million rmse down to 1 million. While this is not where we want it to be, we are satisfied with this result. Some barriers that blocked our path were due to our limited dataset size, about 66,000. In the beginning, we believed this to be enough, but it seems that for this idea it leaves much to be needed in the case of predicting. The most important thing that's keeping our model from performing better is not having enough features. With some sort of sentiment analyses/categorization of text it might be easier for the model to see a relationship between views and other features
+In conclusion, when looking at the models we find that it was very difficult to create a model that would predict view count based on the model we have. Although our lowest rmse value shown in this report was about 1 million it was a great improvement compared to the rmse values found while testing out our model. This was partly due to our need for scaling, factorization and choosing the correct predictors. With the techniques learned in class we were able to improve this model from 3 million rmse down to 1 million. While this is not where we want it to be, we are satisfied with this result. Some barriers that blocked our path were due to our limited dataset size, about 66,000. In the beginning, we believed this to be enough, but it seems that for this idea it leaves much to be needed in the case of predicting. The most important thing that's keeping our model from performing better is not having enough features. With some sort of sentiment analyses/categorization of text it might be easier for the model to see a relationship between views and other features. 
 
 
 
